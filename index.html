@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Baloo+2&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" type="image/x-icon" href="/images/earth.png" />
+    <title>WebP Converter</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Baloo 2", sans-serif;
+      }
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        margin: 20px;
+        background: #20002c;
+        background: -webkit-linear-gradient(to right, #cbb4d4, #20002c);
+        background: linear-gradient(to right, #cbb4d4, #20002c);
+        color: white;
+      }
+
+      .converterBtn {
+        border-radius: 1rem;
+        font-family: "Baloo 2", sans-serif;
+        background-color: #2b2a2b;
+        color: white;
+        box-shadow: 1px 1px 5px #969494;
+      }
+
+      input {
+        margin-bottom: 10px;
+      }
+
+      button {
+        padding: 10px;
+        cursor: pointer;
+      }
+
+      #output {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      img {
+        max-width: 100%;
+        margin: 10px;
+      }
+
+      a {
+        margin: 10px;
+      }
+
+      .loaderBox {
+        width: 100%;
+        height: 50vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      #loader {
+        width: 48px;
+        height: 48px;
+        margin: auto;
+        position: relative;
+        display: none;
+      }
+      #loader:before {
+        content: "";
+        width: 48px;
+        height: 5px;
+        background: #000;
+        opacity: 0.25;
+        position: absolute;
+        top: 60px;
+        left: 0;
+        border-radius: 50%;
+        animation: shadow 0.5s linear infinite;
+      }
+      #loader:after {
+        content: "";
+        width: 100%;
+        height: 100%;
+        background: #fff;
+        animation: bxSpin 0.5s linear infinite;
+        position: absolute;
+        top: 0;
+        left: 0;
+        border-radius: 4px;
+      }
+      @keyframes bxSpin {
+        17% {
+          border-bottom-right-radius: 3px;
+        }
+        25% {
+          transform: translateY(9px) rotate(22.5deg);
+        }
+        50% {
+          transform: translateY(18px) scale(1, 0.9) rotate(45deg);
+          border-bottom-right-radius: 40px;
+        }
+        75% {
+          transform: translateY(9px) rotate(67.5deg);
+        }
+        100% {
+          transform: translateY(0) rotate(90deg);
+        }
+      }
+
+      @keyframes shadow {
+        0%,
+        100% {
+          transform: scale(1, 1);
+        }
+        50% {
+          transform: scale(1.2, 1);
+        }
+      }
+
+      .hideBtn {
+        display: none;
+      }
+
+      .main-box {
+        display: flex;
+        justify-content: center;
+        align-items: baseline;
+      }
+
+      .sub-box {
+        display: flex;
+        justify-content: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="main-box">
+      <input type="file" id="imageInput" accept="image/*" multiple />
+      <div class="sub-box">
+        <button class="converterBtn webBtn" onclick="convertToWebP()">
+          Convert to WebP
+        </button>
+        <div class="downloadBtn">
+          <button
+            class="converterBtn hideBtn"
+            style="margin-left: 10px"
+            onclick="downloadAll()"
+          >
+            Download All
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="loaderBox">
+      <div id="loader"></div>
+    </div>
+    <div id="output"></div>
+
+    <script>
+      const convertedImages = [];
+
+      function showLoading() {
+        document.getElementById("loader").style.display = "block";
+      }
+
+      function hideLoading() {
+        document.getElementById("loader").style.display = "none";
+        document.querySelector(".hideBtn").style.display = "block";
+        document.querySelector(".webBtn").classList.add("hideBtn");
+      }
+
+      function convertToWebP() {
+        const inputElement = document.getElementById("imageInput");
+        const files = inputElement.files;
+
+        if (!files.length) {
+          alert("Please select one or more image files.");
+          return;
+        }
+
+        showLoading();
+
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const reader = new FileReader();
+
+          reader.onload = function (e) {
+            const img = new Image();
+            img.onload = function () {
+              const canvas = document.createElement("canvas");
+              const ctx = canvas.getContext("2d");
+              canvas.width = img.width;
+              canvas.height = img.height;
+              ctx.drawImage(img, 0, 0, img.width, img.height);
+
+              const webPDataUrl = canvas.toDataURL("image/webp");
+              convertedImages.push({
+                dataUrl: webPDataUrl,
+                fileName: `converted_image_${i}.webp`,
+              });
+
+              if (convertedImages.length === files.length) {
+                // All images processed, hide loading
+                hideLoading();
+              }
+            };
+            img.src = e.target.result;
+          };
+
+          reader.readAsDataURL(file);
+        }
+      }
+
+      function downloadAll() {
+        if (convertedImages.length === 0) {
+          alert("No converted images to download.");
+          return;
+        }
+
+        const zip = new JSZip();
+
+        convertedImages.forEach((image, index) => {
+          const { dataUrl, fileName } = image;
+          const base64Data = dataUrl.split(",")[1];
+          zip.file(fileName, base64Data, { base64: true });
+        });
+
+        zip
+          .generateAsync({ type: "blob" })
+          .then((blob) => {
+            const zipFileName = "converted_images.zip";
+            saveAs(blob, zipFileName);
+            location.reload();
+          })
+          .catch((error) => console.error(error));
+      }
+    </script>
+
+    <!-- Include JSZip and FileSaver.js libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  </body>
+</html>
